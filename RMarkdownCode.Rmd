@@ -1,0 +1,296 @@
+---
+title: "STA 108: Final - R Code"
+subtitle: "Macy Chen"
+output:
+  pdf_document: default
+urlcolor: blue
+---
+
+```{r, include = FALSE}
+student_num = 923176901
+student_num_last3 = 901
+set.seed(student_num_last3)
+```
+
+Create a random subset of 200 cases from the dataset.
+```{r}
+sleepdata <- read.csv("~/RStudioProjects/STA108/Final/Data/sleepdata.csv")
+
+N <- dim(sleepdata)[1]
+sap <- sample(1:N, 200)
+
+mysubset <- sleepdata[sap,]
+
+write.csv(mysubset, "~/RStudioProjects/STA108/Final/Data/sleepdata_subset.csv")
+```
+
+```{r}
+dataset <- read.csv("~/RStudioProjects/STA108/Final/Data/sleepdata_subset.csv")
+```
+
+```{r}
+# Scatterplots
+
+par(mfrow=c(2,2))
+plot(dataset$DepressionScore, dataset$GPA, 
+     main = "Depression Score vs. GPA", 
+     xlab = "Depression Score", 
+     ylab = "GPA")
+
+plot(dataset$AnxietyScore, dataset$GPA, 
+     main = "Anxiety Score vs. GPA", 
+     xlab = "Anxiety Score", 
+     ylab = "GPA")
+
+plot(dataset$StressScore, dataset$GPA, 
+     main = "Stress Score vs. GPA", 
+     xlab = "Stress Score", 
+     ylab = "GPA")
+
+plot(dataset$DASScore, dataset$GPA, 
+     main = "DAS Score vs. GPA", 
+     xlab = "DAS Score", 
+     ylab = "GPA")
+
+```
+
+```{r}
+par(mfrow=c(2,2))
+plot(dataset$ClassesMissed, dataset$GPA, 
+     main = "Classes Missed vs. GPA", 
+     xlab = "Classes Missed", 
+     ylab = "GPA")
+
+plot(dataset$CognitionZscore, dataset$GPA, 
+     main = "Cognition Z-score vs. GPA", 
+     xlab = "Cognition Z-score", 
+     ylab = "GPA")
+
+plot(dataset$Happiness, dataset$GPA, 
+     main = "Happiness vs. GPA", 
+     xlab = "Happiness", 
+     ylab = "GPA")
+
+plot(dataset$Drinks, dataset$GPA, 
+     main = "Drinks vs. GPA", 
+     xlab = "Drinks (per week)", 
+     ylab = "GPA")
+
+```
+
+```{r}
+par(mfrow=c(2,2))
+plot(dataset$PoorSleepQuality, dataset$GPA, 
+     main = "Poor Sleep Quality vs. GPA", 
+     xlab = "Poor Sleep Quality", 
+     ylab = "GPA")
+
+plot(dataset$AverageSleep, dataset$GPA, 
+     main = "Average Sleep vs. GPA", 
+     xlab = "Average Sleep (hours)", 
+     ylab = "GPA")
+
+plot(dataset$WeekdaySleep, dataset$GPA, 
+     main = "Weekday Sleep vs. GPA", 
+     xlab = "Weekday Sleep (hours)", 
+     ylab = "GPA")
+
+```
+
+```{r}
+# Simple linear regressions
+summary(lm(GPA ~ ClassesMissed, data = dataset))
+summary(lm(GPA ~ log(ClassesMissed + 1), data = dataset))
+
+```
+
+```{r}
+summary(lm(GPA ~ CognitionZscore, data = dataset))
+
+summary(lm(GPA ~ PoorSleepQuality, data = dataset))
+
+summary(lm(GPA ~ DepressionScore, data = dataset))
+
+summary(lm(GPA ~ AnxietyScore, data = dataset))
+
+```
+
+```{r}
+summary(lm(GPA ~ StressScore, data = dataset))
+summary(lm(GPA ~ log(StressScore + 1), data = dataset))
+
+```
+
+```{r}
+summary(lm(GPA ~ DASScore, data = dataset))
+summary(lm(GPA ~ log(DASScore + 1), data = dataset))
+
+```
+
+```{r}
+summary(lm(GPA ~ Happiness, data = dataset))
+
+summary(lm(GPA ~ Drinks, data = dataset))
+
+summary(lm(GPA ~ AverageSleep, data = dataset))
+
+summary(lm(GPA ~ WeekdaySleep, data = dataset))
+
+```
+
+```{r}
+correlation_matrix <- cor(dataset[, c("ClassesMissed", "CognitionZscore", 
+                                      "PoorSleepQuality", "DepressionScore", 
+                                      "AnxietyScore", "StressScore", "DASScore", 
+                                      "Happiness", "Drinks", "AverageSleep", "WeekdaySleep")])
+
+library(ggplot2)
+library(reshape2)
+
+correlation_data <- melt(correlation_matrix)
+
+ggplot(correlation_data, aes(Var1, Var2, fill = value)) +
+  geom_tile() +
+  geom_text(aes(label = round(value, 2))) +
+  scale_fill_gradient2(high = "red") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Correlation Matrix Heatmap", x = "", y = "")
+
+```
+
+```{r}
+full_model <- lm(GPA ~ log(ClassesMissed + 1) + CognitionZscore + PoorSleepQuality + 
+                   DepressionScore + AnxietyScore + log(StressScore + 1) + Happiness + 
+                   Drinks + WeekdaySleep, data = dataset)
+
+summary(full_model)
+
+anova(full_model)
+
+```
+
+```{r}
+#With interaction terms
+step(full_model, scope = ~ .^2, direction = "both")
+```
+
+```{r}
+new_model <- lm(GPA ~ log(ClassesMissed + 1) + CognitionZscore + AnxietyScore + 
+                  log(StressScore + 1) + Happiness + Drinks + log(StressScore + 1)*Drinks + 
+                  Happiness*Drinks + CognitionZscore*log(StressScore + 1), data = dataset)
+
+summary(new_model)
+
+anova(new_model)
+```
+
+```{r}
+library(leaps)
+
+forward <- regsubsets(GPA ~ log(ClassesMissed + 1) + CognitionZscore + AnxietyScore + 
+                  log(StressScore + 1) + Happiness + Drinks + log(StressScore + 1)*Drinks + 
+                  Happiness*Drinks + CognitionZscore*log(StressScore + 1), 
+                  data = dataset, method = "forward")
+
+summary(forward)
+```
+
+```{r}
+backward <- regsubsets(GPA ~ log(ClassesMissed + 1) + CognitionZscore + AnxietyScore + 
+                  log(StressScore + 1) + Happiness + Drinks + log(StressScore + 1)*Drinks + 
+                  Happiness*Drinks + CognitionZscore*log(StressScore + 1), 
+                  data = dataset, method = "backward")
+
+summary(backward)
+```
+
+```{r}
+model1 <- lm(GPA ~ log(ClassesMissed + 1) + CognitionZscore + AnxietyScore + 
+                  log(StressScore + 1) + Drinks + log(StressScore + 1)*Drinks + 
+                  Happiness*Drinks + CognitionZscore*log(StressScore + 1), data = dataset)
+
+model2 <- lm(GPA ~ log(ClassesMissed + 1) + CognitionZscore + AnxietyScore + 
+                  log(StressScore + 1) + Happiness + Drinks + log(StressScore + 1)*Drinks + 
+                  Happiness*Drinks, data = dataset)
+
+#anova(reduced_model, full_model)
+anova(model2, model1)
+
+```
+
+```{r}
+par(mfrow=c(3,2))
+plot(log(dataset$ClassesMissed + 1), new_model$residuals, 
+     xlab = "Classes Missed", ylab = "Residuals", 
+     main = "Residuals vs. Classes Missed")
+abline(h = 0)
+
+plot(dataset$CognitionZscore, new_model$residuals, 
+     xlab = "Cognition Z-score", ylab = "Residuals", 
+     main = "Residuals vs. Cognition Z-score")
+abline(h = 0)
+
+plot(dataset$AnxietyScore, new_model$residuals, 
+     xlab = "Drinks (per week)", ylab = "Residuals", 
+     main = "Residuals vs. Drinks")
+abline(h = 0)
+
+plot(dataset$Drinks, new_model$residuals, 
+     xlab = "Drinks (per week)", ylab = "Residuals", 
+     main = "Residuals vs. Drinks")
+abline(h = 0)
+
+plot(dataset$Happiness, new_model$residuals, 
+     xlab = "Happiness", ylab = "Residuals", 
+     main = "Residuals vs. Happiness")
+abline(h = 0)
+
+plot(log(dataset$StressScore + 1), new_model$residuals, 
+     xlab = "Stress Score", ylab = "Residuals", 
+     main = "Residuals vs. Stress Score")
+abline(h = 0)
+```
+
+```{r}
+par(mfrow=c(2,2))
+plot(log(dataset$StressScore + 1)*dataset$Drinks, new_model$residuals, 
+     xlab = "StressScore*Drinks", ylab = "Residuals", 
+     main = "Residuals vs. StressScore*Drinks")
+abline(h = 0)
+
+plot(dataset$Happiness*dataset$Drinks, new_model$residuals, 
+     xlab = "Happiness*Drinks", ylab = "Residuals", 
+     main = "Residuals vs. Happiness*Drinks")
+abline(h = 0)
+
+plot(dataset$CognitionZscore*log(dataset$StressScore + 1), new_model$residuals, 
+     xlab = "CognitionZscore*StressScore", ylab = "Residuals", 
+     main = "Residuals vs. CognitionZscore*StressScore")
+abline(h = 0)
+
+```
+
+
+```{r}
+plot(new_model$fitted.values, new_model$residuals, 
+     xlab = "Fitted Values", ylab = "Residuals", 
+     main = "Residuals vs Fitted Values")
+abline(h = 0)
+
+```
+
+```{r}
+qqnorm(new_model$residuals)
+qqline(new_model$residuals, col = "red")
+
+hist(new_model$residuals)
+
+```
+
+```{r}
+library(MASS)
+
+boxcox(new_model)
+
+```
+
